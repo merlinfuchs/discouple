@@ -6,13 +6,14 @@ import math
 import ujson
 from urllib.parse import quote as urlquote
 from datetime import datetime, timezone
+from abc import ABC
 import sys
 
 
 __all__ = (
     'Route',
     'QueuedRequest',
-    'RateLimitHandler',
+    'DefaultRateLimitHandler',
     'HTTPClient'
 )
 
@@ -69,11 +70,28 @@ class QueuedRequest:
         return self.future
 
 
-class RateLimitHandler:
+class BaseRateLimitHandler(ABC):
     """
     Responsible for mapping the ratelimits to the correct routes
     Everything is async to support distributed handling in subclasses
     """
+    async def get_bucket(self, route: Route) -> str:
+        pass
+
+    async def get_delta(self, route: Route) -> float:
+        pass
+
+    async def set_delta(self, route: Route, delta: float):
+        pass
+
+    async def set_global(self, delta):
+        pass
+
+    async def set_bucket(self, route: Route, bucket):
+        pass
+
+
+class DefaultRateLimitHandler(BaseRateLimitHandler):
     def __init__(self):
         self._global = 0
         self._buckets = {}
@@ -125,7 +143,7 @@ class HTTPClient:
         self.queue = asyncio.Queue()
 
         self._worker = None
-        self._ratelimits = ratelimit_handler or RateLimitHandler()
+        self._ratelimits = ratelimit_handler or DefaultRateLimitHandler()
 
         user_agent = 'DisCouple (https://github.com/Merlintor/discouple) Python/{1[0]}.{1[1]} aiohttp/{2}'
         self.user_agent = user_agent.format(sys.version_info, aiohttp.__version__)

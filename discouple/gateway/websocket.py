@@ -6,6 +6,7 @@ import zlib
 import threading
 import time
 import concurrent.futures
+from abc import ABC
 from enum import IntEnum
 
 
@@ -17,7 +18,7 @@ __all__ = (
     'HeartbeatHandler',
     'ResumeWebSocket',
     'IdentifyWebSocket',
-    'IdentifyLock',
+    'DefaultIdentifyLock',
     'Opcodes'
 )
 
@@ -46,12 +47,21 @@ class Opcodes(IntEnum):
     GUILD_SYNC = 12
 
 
-class IdentifyLock:
-    """
-    Wraps around asyncio.Lock and provides a context manager
-    Both acquire and release are async to support distributed locks in subclasses
-    """
+class BaseIdentifyLock(ABC):
+    async def acquire(self):
+        pass
 
+    async def release(self):
+        pass
+
+    async def __aenter__(self):
+        return await self.acquire()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return await self.release()
+
+
+class DefaultIdentifyLock(BaseIdentifyLock):
     def __init__(self):
         self._lock = asyncio.Lock()
 
@@ -60,12 +70,6 @@ class IdentifyLock:
 
     async def release(self):
         self._lock.release()
-
-    async def __aenter__(self):
-        return await self.acquire()
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        return await self.release()
 
 
 class HeartbeatHandler(threading.Thread):
@@ -122,7 +126,7 @@ class DiscordWebSocket:
         self._session = session
         self.loop = loop or asyncio.get_event_loop()
         self._dispatch = dispatch
-        self._identify_lock = options.get("identify_lock") or IdentifyLock()
+        self._identify_lock = options.get("identify_lock") or DefaultIdentifyLock()
 
         self.token = options.get("token")
         self.shard_id = options.get("shard_id", 0)
