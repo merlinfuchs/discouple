@@ -8,6 +8,7 @@ from urllib.parse import quote as urlquote
 from datetime import datetime, timezone
 from abc import ABC
 import sys
+import aioredis
 
 
 __all__ = (
@@ -92,6 +93,9 @@ class BaseRateLimitHandler(ABC):
 
 
 class DefaultRateLimitHandler(BaseRateLimitHandler):
+    """
+    Handles ratelimits locally without being aware of possible distribution
+    """
     def __init__(self):
         self._global = 0
         self._buckets = {}
@@ -117,6 +121,38 @@ class DefaultRateLimitHandler(BaseRateLimitHandler):
 
     async def set_bucket(self, route: Route, bucket):
         self._buckets[route.path] = bucket
+
+
+class RedisRateLimitHandler(BaseRateLimitHandler):
+    """
+    Handles ratelimits in redis using key expiration
+    """
+    def __init__(self, redis: aioredis.Redis, key_prefix="ratelimit:"):
+        self._redis = redis
+        self._key_prefix = key_prefix
+
+    async def get_bucket(self, route: Route) -> str:
+        bucket = await self._redis.hget(self._key_prefix + "buckets", route.path)
+        return bucket or route.default_bucket
+
+    async def get_delta(self, route: Route) -> float:
+        global_delta = await self._redis.ttl(self._key_prefix + "global")
+        if global_delta > 0:
+            return global_delta
+
+        bucket = await self.get_bucket(route)
+        delta = await self._redis.ttl(self._key_prefix + bucket)
+        return min(delta, 0)
+
+    async def set_delta(self, route: Route, delta: float):
+        bucket = await self.get_bucket(route)
+        await self._redis.setex(self._key_prefix + bucket, delta, 1)
+
+    async def set_global(self, delta):
+        return await self._redis.setex(self._key_prefix + "global", delta, 1)
+
+    async def set_bucket(self, route: Route, bucket):
+        return await self._redis.hset(self._key_prefix + "buckets", route.path, bucket)
 
 
 async def json_or_text(response):
