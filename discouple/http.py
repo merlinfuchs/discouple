@@ -85,10 +85,10 @@ class BaseRateLimitHandler(ABC):
     async def set_delta(self, route: Route, delta: float):
         pass
 
-    async def set_global(self, delta):
+    async def set_global(self, delta: float):
         pass
 
-    async def set_bucket(self, route: Route, bucket):
+    async def set_bucket(self, route: Route, bucket: str):
         pass
 
 
@@ -116,10 +116,10 @@ class DefaultRateLimitHandler(BaseRateLimitHandler):
         bucket = await self.get_bucket(route)
         self._deltas[bucket] = delta
 
-    async def set_global(self, delta):
+    async def set_global(self, delta: float):
         self._global = time.perf_counter() + delta
 
-    async def set_bucket(self, route: Route, bucket):
+    async def set_bucket(self, route: Route, bucket: str):
         self._buckets[route.path] = bucket
 
 
@@ -148,10 +148,10 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
         bucket = await self.get_bucket(route)
         await self._redis.setex(self._key_prefix + bucket, delta, 1)
 
-    async def set_global(self, delta):
+    async def set_global(self, delta: float):
         return await self._redis.setex(self._key_prefix + "global", delta, 1)
 
-    async def set_bucket(self, route: Route, bucket):
+    async def set_bucket(self, route: Route, bucket: str):
         return await self._redis.hset(self._key_prefix + "buckets", route.path, bucket)
 
 
