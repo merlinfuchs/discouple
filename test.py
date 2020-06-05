@@ -22,7 +22,7 @@ async def test():
         session=session,
         dispatch=dummy_dispatch,
         shard_count=5,
-        token="NDEwMTM4NzA2NDkwNDI1MzQ0.XrRzJw.EwMeCvP6MsQbUtqKiEpmlSgq0Bs"
+        token=""
     )
 
     async def command_test():
