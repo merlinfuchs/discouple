@@ -10,25 +10,34 @@ from abc import ABC
 import sys
 import aioredis
 
+from .entities import *
+
 
 __all__ = (
     'Route',
     'QueuedRequest',
-    'DefaultRateLimitHandler',
+    'BaseRateLimitHandler',
+    'LocalRateLimitHandler',
+    'RedisRateLimitHandler',
     'HTTPClient'
 )
 
 
-@dataclasses.dataclass
 class Route:
     """
     Represents a discord api route with all major and minor parameters
     """
     BASE = 'https://discordapp.com/api/v7'
 
-    path: str
-    method: str = "GET"
-    parameters: dict = dataclasses.field(default_factory=dict)
+    def __init__(self, method: str, path: str, **parameters):
+        self.method = method
+        self.path = path
+        self.parameters = {
+            "guild_id": None,
+            "channel_id": None,
+            "webhook_id": None
+        }
+        self.parameters.update(parameters)
 
     @property
     def url(self) -> str:
@@ -57,18 +66,18 @@ class QueuedRequest:
     options: dict
 
     time_added: float = dataclasses.field(default_factory=time.perf_counter)
-    ttl: int = 30
+    timeout: int = 30
     tries: int = 0
 
     @property
     def expiration(self) -> float:
-        if self.ttl is not None:
-            return self.time_added + self.ttl
+        if self.timeout is not None:
+            return self.time_added + self.timeout
 
         return math.inf
 
     def __await__(self):
-        return self.future
+        return self.future.__await__()
 
 
 class BaseRateLimitHandler(ABC):
@@ -92,7 +101,7 @@ class BaseRateLimitHandler(ABC):
         pass
 
 
-class DefaultRateLimitHandler(BaseRateLimitHandler):
+class LocalRateLimitHandler(BaseRateLimitHandler):
     """
     Handles ratelimits locally without being aware of possible distribution
     """
@@ -172,26 +181,26 @@ class HTTPClient:
     Interacts with the discord rest api and handles the rate limits
     A request queue is used internally to help reduce 429s
     """
-    def __init__(self, loop, session, token, ratelimit_handler=None):
+    def __init__(self, session, token, loop=None, ratelimit_handler=None):
         self.loop = loop or asyncio.get_event_loop()
         self.session = session
         self.token = token
         self.queue = asyncio.Queue()
 
         self._worker = None
-        self._ratelimits = ratelimit_handler or DefaultRateLimitHandler()
+        self._ratelimits = ratelimit_handler or LocalRateLimitHandler()
 
-        user_agent = 'DisCouple (https://github.com/Merlintor/discouple) Python/{1[0]}.{1[1]} aiohttp/{2}'
+        user_agent = 'DisCouple (https://github.com/Merlintor/discouple) Python/{1[0]} aiohttp/{1}'
         self.user_agent = user_agent.format(sys.version_info, aiohttp.__version__)
 
-    async def request(self, route, ttl=30, **options):
+    async def request(self, route, timeout=None, **options):
         """
         Add a route to the request queue
         """
         self.start_worker()
 
         future = self.loop.create_future()
-        req = QueuedRequest(future=future, route=route, ttl=ttl, options=options)
+        req = QueuedRequest(future=future, route=route, timeout=timeout, options=options)
         await self.queue.put(req)
         return await req
 
@@ -283,6 +292,23 @@ class HTTPClient:
 
             finally:
                 self.queue.task_done()
+
+    # ---- Specific Route Implementations ---
+
+    def create_message(self, channel_id, content):
+        return self.request(
+            Route("POST", "/channels/{channel_id}/messages", channel_id=channel_id),
+            json={
+                "content": content
+            },
+            klass=Message
+        )
+
+    def get_bot_user(self):
+        return self.request(Route("GET", "/users/@me"))
+
+    def get_user(self, user_id):
+        return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
 
 
 
