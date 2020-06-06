@@ -78,3 +78,10 @@ class Member(Hashable):
 class Message(Hashable):
     def __init__(self, *, data, cache):
         self._cache = cache
+
+        self.id = int(data["id"])
+        self.content = data.get("content", "")
+
+    @classmethod
+    async def from_message_create(cls, *, data, cache):
+        return cls(data=data, cache=cache)
