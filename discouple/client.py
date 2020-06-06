@@ -1,6 +1,5 @@
 import asyncio
 from abc import ABC
-import functools
 
 from .broker import Broker
 from .http import HTTPClient
