@@ -1,6 +1,8 @@
 from abc import ABC
 import aio_pika
 import ujson
+import traceback
+import asyncio
 
 
 class Broker(ABC):
@@ -39,9 +41,16 @@ class AMQPBroker(Broker):
 
         async with queue.iterator() as queue_iter:
             async for msg in queue_iter:
-                async with msg.process():
-                    data = ujson.loads(msg.body)
-                    await self.callback(msg.routing_key.upper(), data)
+                try:
+                    async with msg.process():
+                        data = ujson.loads(msg.body)
+                        await self.callback(msg.routing_key.upper(), data)
+
+                except asyncio.CancelledError:
+                    raise
+
+                except Exception:
+                    traceback.print_exc()
 
     async def send(self, data):
         await self.exchange.publish(
