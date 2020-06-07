@@ -79,7 +79,11 @@ class Client(HTTPMixin, CacheMixin):
             "MESSAGE_CREATE": Message.from_message_create
         }
         parser = parsers.get(event.upper())
-        result = await parser(data=data, cache=self.cache, http=self.http)
+        if parser:
+            result = await parser(data=data, cache=self.cache, http=self.http)
+
+        else:
+            result = data
 
         if isinstance(result, (list, tuple)):
             self._process_listeners(event, *result)
