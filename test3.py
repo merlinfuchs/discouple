@@ -16,6 +16,11 @@ async def run():
     )
 
     client = Client(broker=broker, http=http, cache=cache)
+
+    @client.listener
+    async def on_message_create(msg):
+        print(msg.content)
+
     await client.login()
     await broker.subscribe("asda", "MESSAGE_CREATE")
 
