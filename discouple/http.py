@@ -169,15 +169,16 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
 
 
 async def json_or_text(response):
-    text = await response.text(encoding="utf-8")
     try:
         if response.headers["content-type"] == "application/json":
-            return orjson.loads(text)
+            # orjson prefers bytes
+            body = await response.read()
+            return orjson.loads(body)
     except KeyError:
         # Thanks Cloudflare
         pass
 
-    return text
+    return await response.text(encoding="utf-8")
 
 
 class HTTPClient:
