@@ -15,6 +15,7 @@ class Resumable(ABC):
         Commands are split up into sections which should be decorated with this
         Each section can be run from another worker without state
         """
+
         def _predicate(callback):
             res = Resume(self, callback, *args, **kwargs)
             self.resumes.add(res)

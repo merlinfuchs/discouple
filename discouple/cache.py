@@ -1,12 +1,6 @@
 from abc import ABC
 
-
-__all__ = (
-    'EntityCache',
-    'NoEntityCache',
-    'LocalEntityCache',
-    'RedisEntityCache'
-)
+__all__ = ("EntityCache", "NoEntityCache", "LocalEntityCache", "RedisEntityCache")
 
 
 class EntityCache(ABC):
@@ -14,6 +8,7 @@ class EntityCache(ABC):
     Responsible for storing discord entities like guilds, roles and channels
     Everything is async to support a distributed cache
     """
+
     async def store_guild(self, data):
         pass
 

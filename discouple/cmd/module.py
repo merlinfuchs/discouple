@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
 import asyncio
 import traceback
+
+from datetime import datetime, timedelta
 
 from .command import Command
 
@@ -23,7 +24,7 @@ class Task:
             hour=self.units.get("hour", 0),
             minute=self.units.get("minute", 0),
             second=self.units.get("seconds", 0),
-            microsecond=0
+            microsecond=0,
         )
 
         wait = time - now
@@ -39,7 +40,7 @@ class Task:
                 try:
                     await self.callback(self.module)
 
-                except:
+                except Exception:
                     traceback.print_exc()
 
         return coro()

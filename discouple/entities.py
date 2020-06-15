@@ -1,5 +1,5 @@
-from datetime import datetime
 from abc import ABC
+from datetime import datetime
 
 DISCORD_EPOCH = 1420070400000
 
@@ -13,7 +13,7 @@ __all__ = (
     "Role",
     "User",
     "Member",
-    "Message"
+    "Message",
 )
 
 
@@ -70,7 +70,9 @@ class Entity(Hashable):
     @staticmethod
     def requires_http(func):
         def _wrapper(entity, *args, **kwargs):
-            assert entity.has_http(), "This method requires the http client to be present"
+            assert (
+                entity.has_http()
+            ), "This method requires the http client to be present"
             return func(*args, **kwargs)
 
         return _wrapper
@@ -115,10 +117,30 @@ class Member(Entity):
 
 
 class Message(Entity):
-    __slots__ = ("channel_id", "guild_id", "author", "content", "timestamp", "edited_timestamp", "tts",
-                 "mention_everyone", "mentions", "mention_role_ids", "mention_channels", "attachments", "embeds",
-                 "reactions", "nonce", "pinned", "webhook_id", "type", "activity", "application", "message_reference",
-                 "flags")
+    __slots__ = (
+        "channel_id",
+        "guild_id",
+        "author",
+        "content",
+        "timestamp",
+        "edited_timestamp",
+        "tts",
+        "mention_everyone",
+        "mentions",
+        "mention_role_ids",
+        "mention_channels",
+        "attachments",
+        "embeds",
+        "reactions",
+        "nonce",
+        "pinned",
+        "webhook_id",
+        "type",
+        "activity",
+        "application",
+        "message_reference",
+        "flags",
+    )
 
     def _update(self, data):
         self.channel_id = int(data["channel_id"])

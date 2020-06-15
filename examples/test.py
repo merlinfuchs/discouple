@@ -1,9 +1,10 @@
-from discouple import *
-import aiohttp
 import asyncio
 import logging
 import traceback
 
+import aiohttp
+
+from discouple import *
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -19,10 +20,7 @@ async def test():
 
     session = aiohttp.ClientSession()
     test = DiscordGateway(
-        session=session,
-        dispatch=dummy_dispatch,
-        shard_count=5,
-        token=""
+        session=session, dispatch=dummy_dispatch, shard_count=5, token=""
     )
 
     async def command_test():
