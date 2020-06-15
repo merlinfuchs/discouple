@@ -1,9 +1,10 @@
-from abc import ABC
 import inspect
 
-from .resume import Resume, Resumable
+from abc import ABC
+
 from .check import Check, Cooldown
 from .errors import *
+from .resume import Resumable, Resume
 
 
 class CommandTable(ABC):
@@ -84,6 +85,7 @@ class CommandParameter:
 
         self.converter = converter
         if converter is bool:
+
             def _bool_converter(a):
                 a = str(a).lower()
                 return a == "y" or a == "yes" or a == "true"
@@ -96,7 +98,7 @@ class CommandParameter:
             p.name,
             p.kind,
             p.default,
-            p.annotation if p.annotation != inspect.Parameter.empty else None
+            p.annotation if p.annotation != inspect.Parameter.empty else None,
         )
 
     def parse(self, args):
@@ -118,10 +120,7 @@ class CommandParameter:
 
         elif self.kind == inspect.Parameter.VAR_KEYWORD:
             converter = self.converter or dict
-            arg = {
-                a: b
-                for a, b in map(lambda ab: ab.split("="), args)
-            }
+            arg = {a: b for a, b in map(lambda ab: ab.split("="), args)}
             args.clear()
 
         else:
@@ -139,7 +138,16 @@ class CommandParameter:
 
 
 class Command(CommandTable, Resumable):
-    def __init__(self, callback, name=None, description=None, aliases=None, hidden=None, *args, **kwargs):
+    def __init__(
+        self,
+        callback,
+        name=None,
+        description=None,
+        aliases=None,
+        hidden=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.module = None  # Gets filled later if this command belongs to a module

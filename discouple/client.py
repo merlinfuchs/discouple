@@ -1,10 +1,11 @@
 import asyncio
+
 from abc import ABC
 
 from .broker import Broker
-from .http import HTTPClient
 from .cache import EntityCache, NoEntityCache
 from .entities import *
+from .http import HTTPClient
 
 
 class HTTPMixin(ABC):
@@ -43,7 +44,9 @@ class CacheMixin(ABC):
 
 
 class Client(HTTPMixin, CacheMixin):
-    def __init__(self, broker: Broker, http: HTTPClient, cache: EntityCache = None, loop=None):
+    def __init__(
+        self, broker: Broker, http: HTTPClient, cache: EntityCache = None, loop=None
+    ):
         self.loop = loop or asyncio.get_event_loop()
         self.broker = broker
         broker.callback = self._event_received
@@ -75,9 +78,7 @@ class Client(HTTPMixin, CacheMixin):
                 self.loop.create_task(listener(*args))
 
     async def _event_received(self, event, data):
-        parsers = {
-            "MESSAGE_CREATE": Message.from_message_create
-        }
+        parsers = {"MESSAGE_CREATE": Message.from_message_create}
         parser = parsers.get(event.upper())
         if parser:
             result = await parser(data=data, cache=self.cache, http=self.http)

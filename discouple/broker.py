@@ -1,8 +1,10 @@
-from abc import ABC
-import aio_pika
-import ujson
-import traceback
 import asyncio
+import traceback
+
+from abc import ABC
+
+import aio_pika
+import orjson
 
 
 class Broker(ABC):
@@ -32,7 +34,9 @@ class AMQPBroker(Broker):
     async def connect(self, group, *args, **kwargs):
         self.connection = await aio_pika.connect_robust(*args, **kwargs)
         self.channel = await self.connection.channel()
-        self.exchange = await self.channel.declare_exchange(group, type="direct", durable=True)
+        self.exchange = await self.channel.declare_exchange(
+            group, type="direct", durable=True
+        )
 
     async def subscribe(self, queue, *events):
         queue = await self.channel.declare_queue(queue, auto_delete=not queue)
@@ -43,7 +47,7 @@ class AMQPBroker(Broker):
             async for msg in queue_iter:
                 try:
                     async with msg.process():
-                        data = ujson.loads(msg.body)
+                        data = orjson.loads(msg.body)
                         await self.callback(msg.routing_key.upper(), data)
 
                 except asyncio.CancelledError:
@@ -54,6 +58,5 @@ class AMQPBroker(Broker):
 
     async def send(self, data):
         await self.exchange.publish(
-            aio_pika.Message(body=ujson.dumps(data).encode("utf-8")),
-            routing_key="SEND"
+            aio_pika.Message(body=orjson.dumps(data)), routing_key="SEND"
         )

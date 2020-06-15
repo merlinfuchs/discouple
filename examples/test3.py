@@ -1,6 +1,14 @@
 import asyncio
+
 import aiohttp
-from discouple import Client, LocalRateLimitHandler, HTTPClient, AMQPBroker, LocalEntityCache
+
+from discouple import (
+    AMQPBroker,
+    Client,
+    HTTPClient,
+    LocalEntityCache,
+    LocalRateLimitHandler,
+)
 
 
 async def run():
@@ -10,9 +18,7 @@ async def run():
 
     limiter = LocalRateLimitHandler()
     http = HTTPClient(
-        ratelimit_handler=limiter,
-        session=aiohttp.ClientSession(),
-        token=""
+        ratelimit_handler=limiter, session=aiohttp.ClientSession(), token=""
     )
 
     client = Client(broker=broker, http=http, cache=cache)

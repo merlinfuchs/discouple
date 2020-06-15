@@ -1,25 +1,26 @@
 import asyncio
 import dataclasses
-import aiohttp
-import time
 import math
-import ujson
-from urllib.parse import quote as urlquote
-from datetime import datetime, timezone
-from abc import ABC
 import sys
+import time
+
+from abc import ABC
+from datetime import datetime, timezone
+from urllib.parse import quote as urlquote
+
+import aiohttp
 import aioredis
+import orjson
 
 from .entities import *
 
-
 __all__ = (
-    'Route',
-    'QueuedRequest',
-    'BaseRateLimitHandler',
-    'LocalRateLimitHandler',
-    'RedisRateLimitHandler',
-    'HTTPClient'
+    "Route",
+    "QueuedRequest",
+    "BaseRateLimitHandler",
+    "LocalRateLimitHandler",
+    "RedisRateLimitHandler",
+    "HTTPClient",
 )
 
 
@@ -27,16 +28,13 @@ class Route:
     """
     Represents a discord api route with all major and minor parameters
     """
-    BASE = 'https://discordapp.com/api/v7'
+
+    BASE = "https://discordapp.com/api/v7"
 
     def __init__(self, method: str, path: str, **parameters):
         self.method = method
         self.path = path
-        self.parameters = {
-            "guild_id": None,
-            "channel_id": None,
-            "webhook_id": None
-        }
+        self.parameters = {"guild_id": None, "channel_id": None, "webhook_id": None}
         self.parameters.update(parameters)
 
     @property
@@ -60,6 +58,7 @@ class QueuedRequest:
     Represents a request including route and http parameters
     It also includes attributes for efficient queueing
     """
+
     future: asyncio.Future
 
     route: Route
@@ -85,6 +84,7 @@ class BaseRateLimitHandler(ABC):
     Responsible for mapping the ratelimits to the correct routes
     Everything is async to support distributed handling in subclasses
     """
+
     async def get_bucket(self, route: Route) -> str:
         pass
 
@@ -105,6 +105,7 @@ class LocalRateLimitHandler(BaseRateLimitHandler):
     """
     Handles ratelimits locally without being aware of possible distribution
     """
+
     def __init__(self):
         self._global = 0
         self._buckets = {}
@@ -136,6 +137,7 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
     """
     Handles ratelimits in redis using key expiration
     """
+
     def __init__(self, redis: aioredis.Redis, key_prefix="ratelimit:"):
         self._redis = redis
         self._key_prefix = key_prefix
@@ -165,10 +167,10 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
 
 
 async def json_or_text(response):
-    text = await response.text(encoding='utf-8')
+    text = await response.text(encoding="utf-8")
     try:
-        if response.headers['content-type'] == 'application/json':
-            return ujson.loads(text)
+        if response.headers["content-type"] == "application/json":
+            return orjson.loads(text)
     except KeyError:
         # Thanks Cloudflare
         pass
@@ -181,6 +183,7 @@ class HTTPClient:
     Interacts with the discord rest api and handles the rate limits
     A request queue is used internally to help reduce 429s
     """
+
     def __init__(self, session, token, loop=None, ratelimit_handler=None):
         self.loop = loop or asyncio.get_event_loop()
         self.session = session
@@ -190,7 +193,10 @@ class HTTPClient:
         self._worker = None
         self._ratelimits = ratelimit_handler or LocalRateLimitHandler()
 
-        user_agent = 'DisCouple (https://github.com/Merlintor/discouple) Python/{1[0]} aiohttp/{1}'
+        user_agent = (
+            "DisCouple (https://github.com/Merlintor/discouple) Python/{1[0]}"
+            " aiohttp/{1}"
+        )
         self.user_agent = user_agent.format(sys.version_info, aiohttp.__version__)
 
     async def request(self, route, timeout=None, **options):
@@ -200,7 +206,9 @@ class HTTPClient:
         self.start_worker()
 
         future = self.loop.create_future()
-        req = QueuedRequest(future=future, route=route, timeout=timeout, options=options)
+        req = QueuedRequest(
+            future=future, route=route, timeout=timeout, options=options
+        )
         await self.queue.put(req)
         return await req
 
@@ -225,42 +233,41 @@ class HTTPClient:
 
         options = req.options
         options["headers"] = headers = {
-            'User-Agent': self.user_agent,
-            'X-Ratelimit-Precision': 'millisecond',
-            'Authorization': 'Bot ' + self.token
+            "User-Agent": self.user_agent,
+            "X-Ratelimit-Precision": "millisecond",
+            "Authorization": "Bot " + self.token,
         }
 
         if "json" in options:
             headers["Content-Type"] = "application/json"
-            options["data"] = ujson.dumps(options.pop("json"))
+            options["data"] = orjson.dumps(options.pop("json")).decode("utf-8")
 
         if "reason" in options:
             headers["X-Audit-Log-Reason"] = urlquote(options.pop("reason"), safe="/ ")
 
         async with self.session.request(
-            method=route.method,
-            url=route.url,
-            raise_for_status=False,
-            **options
+            method=route.method, url=route.url, raise_for_status=False, **options
         ) as resp:
             data = await json_or_text(resp)
 
-            rl_bucket = resp.headers.get('X-Ratelimit-Remaining')
+            rl_bucket = resp.headers.get("X-Ratelimit-Remaining")
             if rl_bucket is not None:
                 await self._ratelimits.set_bucket(route, rl_bucket)
 
-            rl_remaining = resp.headers.get('X-Ratelimit-Remaining')
+            rl_remaining = resp.headers.get("X-Ratelimit-Remaining")
             if rl_remaining == 0:
-                reset = datetime.fromtimestamp(resp.headers["X-Ratelimit-Reset"], timezone.utc)
+                reset = datetime.fromtimestamp(
+                    resp.headers["X-Ratelimit-Reset"], timezone.utc
+                )
                 delta = (reset - datetime.utcnow()).total_seconds()
                 await self._ratelimits.set_delta(route, delta)
 
             if 300 > resp.status >= 200:
                 return req.future.set_result(data)
 
-            if resp.status == 429 and resp.headers.get('Via'):
-                retry_after = data['retry_after'] / 1000.0
-                is_global = data.get('global', False)
+            if resp.status == 429 and resp.headers.get("Via"):
+                retry_after = data["retry_after"] / 1000.0
+                is_global = data.get("global", False)
                 if is_global:
                     await self._ratelimits.set_global(retry_after)
 
@@ -298,10 +305,8 @@ class HTTPClient:
     def create_message(self, channel_id, content):
         return self.request(
             Route("POST", "/channels/{channel_id}/messages", channel_id=channel_id),
-            json={
-                "content": content
-            },
-            klass=Message
+            json={"content": content},
+            klass=Message,
         )
 
     def get_bot_user(self):
@@ -309,6 +314,3 @@ class HTTPClient:
 
     def get_user(self, user_id):
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
-
-
-
