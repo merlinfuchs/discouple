@@ -5,8 +5,8 @@ import setuptools
 
 ROOT = pathlib.Path(__file__).parent
 
-with open(ROOT / "README.md", "r") as fh:
-    long_description = fh.read()
+with open(ROOT / "README.md", "r") as f:
+    long_description = f.read()
 
 
 with open(ROOT / "discouple" / "__init__.py", encoding="utf-8") as f:
@@ -14,6 +14,9 @@ with open(ROOT / "discouple" / "__init__.py", encoding="utf-8") as f:
     if match is None:
         raise RuntimeError("Could not parse version.")
     VERSION = match.group(1)
+
+with open(ROOT / "requirements.txt", "r") as f:
+    requirements = f.read().splitlines()
 
 setuptools.setup(
     name="discouple",
@@ -35,5 +38,6 @@ setuptools.setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Operating System :: OS Independent",
     ],
+    install_requires=requirements,
     python_requires=">=3.7",
 )
