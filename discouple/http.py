@@ -144,6 +144,8 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
 
     async def get_bucket(self, route: Route) -> str:
         bucket = await self._redis.hget(self._key_prefix + "buckets", route.path)
+        if bucket:
+            bucket = bucket.decode("utf-8")
         return bucket or route.default_bucket
 
     async def get_delta(self, route: Route) -> float:
@@ -167,15 +169,16 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
 
 
 async def json_or_text(response):
-    text = await response.text(encoding="utf-8")
     try:
         if response.headers["content-type"] == "application/json":
-            return orjson.loads(text)
+            # orjson prefers bytes
+            body = await response.read()
+            return orjson.loads(body)
     except KeyError:
         # Thanks Cloudflare
         pass
 
-    return text
+    return await response.text(encoding="utf-8")
 
 
 class HTTPClient:
@@ -237,6 +240,7 @@ class HTTPClient:
             "X-Ratelimit-Precision": "millisecond",
             "Authorization": "Bot " + self.token,
         }
+        klass = options.pop("klass", None)
 
         if "json" in options:
             headers["Content-Type"] = "application/json"
@@ -263,7 +267,11 @@ class HTTPClient:
                 await self._ratelimits.set_delta(route, delta)
 
             if 300 > resp.status >= 200:
-                return req.future.set_result(data)
+                if klass is not None:
+                    result = klass(data)
+                else:
+                    result = data
+                return req.future.set_result(result)
 
             if resp.status == 429 and resp.headers.get("Via"):
                 retry_after = data["retry_after"] / 1000.0
