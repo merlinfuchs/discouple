@@ -12,15 +12,11 @@ class HTTPMixin(ABC):
     http: HTTPClient
     cache: EntityCache
 
-    async def _fetch_and_parse(self, coro, klass):
-        data = await coro
-        return klass(data=data, cache=self.cache)
-
     def fetch_bot_user(self):
-        return self._fetch_and_parse(self.http.get_bot_user(), klass=User)
+        return self.http.get_bot_user()
 
     def fetch_user(self, user_id):
-        return self._fetch_and_parse(self.http.get_user(user_id), klass=User)
+        return self.http.get_user(user_id)
 
 
 class CacheMixin(ABC):
@@ -78,7 +74,12 @@ class Client(HTTPMixin, CacheMixin):
                 self.loop.create_task(listener(*args))
 
     async def _event_received(self, event, data):
-        parsers = {"MESSAGE_CREATE": Message.from_message_create}
+        parsers = {
+            "MESSAGE_CREATE": Message.from_message_create,
+            "MESSAGE_UPDATE": Message.from_message_update,
+            "GUILD_CREATE": Guild.from_guild_create,
+            "GUILD_UPDATE": Guild.from_guild_update
+        }
         parser = parsers.get(event.upper())
         if parser:
             result = await parser(data=data, cache=self.cache, http=self.http)

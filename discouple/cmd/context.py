@@ -3,11 +3,16 @@ class Context:
         self.bot = bot
         self.msg = msg
 
-    def send(self, *args, **kwargs):
-        return self.msg.send(*args, **kwargs)
+        self._data = {}
 
-    def reply(self, *args, **kwargs):
-        return self.send(*args, **kwargs)
+    def __getattr__(self, item):
+        return getattr(self.msg, item)
+
+    def add_data(self, name, data):
+        self._data[name] = data
+
+    def get_data(self, name):
+        return self._data.get(name)
 
     async def resume_with(self, resume):
         """

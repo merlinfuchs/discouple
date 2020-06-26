@@ -318,7 +318,25 @@ class HTTPClient:
         )
 
     def get_bot_user(self):
-        return self.request(Route("GET", "/users/@me"))
+        return self.request(
+            Route("GET", "/users/@me"),
+            klass=User
+        )
 
     def get_user(self, user_id):
-        return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
+        return self.request(
+            Route("GET", "/users/{user_id}", user_id=user_id),
+            klass=User
+        )
+
+    def get_channel(self, channel_id):
+        return self.request(
+            Route("GET", "/channels/{channel_id}", channel_id=channel_id),
+            klass=Channel
+        )
+
+    def get_guild(self, guild_id):
+        return self.request(
+            Route("GET", "/guilds/{guild_id}", guild_id=guild_id),
+            klass=Guild
+        )

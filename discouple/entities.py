@@ -98,7 +98,7 @@ class Guild(Entity):
         "afk_channel_id",
         "afk_timeout",
         "verification_level",
-        "default_message_notification",
+        "default_message_notifications",
         "explicit_content_filter",
         "roles",
         "emojis",
@@ -119,7 +119,7 @@ class Guild(Entity):
         "presences",
         "max_presences",
         "max_members",
-        "vanity_url",
+        "vanity_url_code",
         "description",
         "banner",
         "premium_tier",
@@ -141,8 +141,8 @@ class Guild(Entity):
         self.afk_channel_id = maybe_int(data["afk_channel_id"])
         self.afk_timeout = data["afk_timeout"]
         self.verification_level = GuildVerificationLevel(data["verification_level"])
-        self.default_message_notification = GuildMessageNotificationLevel(data["default_message_notification"])
-        self.explicit_content_filter = GuildContentFilterLevel["explicit_content_filter"]
+        self.default_message_notifications = GuildMessageNotificationLevel(data["default_message_notifications"])
+        self.explicit_content_filter = GuildContentFilterLevel(data["explicit_content_filter"])
         self.roles = [Role(r) for r in data["roles"]]
         self.emojis = None
         self.features = data["features"]
@@ -193,7 +193,8 @@ class Guild(Entity):
 
 
 class Channel(Entity):
-    pass
+    def _update(self, data):
+        self.name = data["name"]
 
 
 class Role(Entity):
@@ -279,8 +280,24 @@ class Message(Entity):
         return cls(data, cache=cache, http=http)
 
     @Entity.requires_http
-    async def send(self, *args, **kwargs):
-        return await self._http.create_message(self.channel_id, *args, **kwargs)
+    def send(self, *args, **kwargs):
+        return self._http.create_message(self.channel_id, *args, **kwargs)
+
+    @Entity.requires_cache
+    def get_channel(self):
+        return self._cache.get_channel(self.channel_id)
+
+    @Entity.requires_http
+    def fetch_channel(self):
+        return self._http.get_channel(self.channel_id)
+
+    @Entity.requires_cache
+    def get_guild(self):
+        return self._cache.get_guild(self.guild_id)
+
+    @Entity.requires_http
+    def fetch_guild(self):
+        return self._http.get_guild(self.guild_id)
 
     def reply(self, *args, **kwargs):
         return self.send(*args, **kwargs)

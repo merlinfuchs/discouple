@@ -3,6 +3,7 @@ import inspect
 from abc import ABC
 
 from .check import Check, Cooldown
+from .converter import Converter
 from .errors import *
 from .resume import Resumable, Resume
 
@@ -126,7 +127,7 @@ class CommandParameter:
             converter = self.converter or str
             arg = args.pop(0)
 
-        if False:  # issubclass(converter, Converter):
+        if issubclass(converter, Converter):
             return converter(self, arg)
 
         else:
@@ -147,11 +148,10 @@ class Command(CommandTable, Resumable):
             *args,
             **kwargs
     ):
-        super().__init__(*args, **kwargs)
+        CommandTable.__init__(self, *args, **kwargs)
+        Resumable.__init__(self)
 
         self.module = None  # Gets filled later if this command belongs to a module
-
-        self.resumes = []
 
         cb = callback
         while isinstance(cb, Check):
