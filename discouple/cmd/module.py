@@ -65,9 +65,8 @@ class Listener:
 
 
 class Module:
-    def __init__(self, client):
-        self.client = client
-        self.bot = client
+    def __init__(self, bot):
+        self.bot = bot
 
     @property
     def commands(self):

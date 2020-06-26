@@ -69,7 +69,7 @@ class Entity(Hashable):
     def requires_cache(func):
         def _wrapper(entity, *args, **kwargs):
             assert entity.has_cache(), "This method requires the cache to be present"
-            return func(*args, **kwargs)
+            return func(entity, *args, **kwargs)
 
         return _wrapper
 
@@ -79,7 +79,7 @@ class Entity(Hashable):
             assert (
                 entity.has_http()
             ), "This method requires the http client to be present"
-            return func(*args, **kwargs)
+            return func(entity, *args, **kwargs)
 
         return _wrapper
 
@@ -173,14 +173,6 @@ class Guild(Entity):
         self.approximate_member_count = data.get("approximate_member_count")
         self.approximate_presence_count = data.get("approximate_presence_count")
 
-    @Entity.requires_http
-    async def fetch_member(self, user_id):
-        pass
-
-    @Entity.requires_cache
-    async def get_member(self, user_id):
-        pass
-
     @classmethod
     async def from_guild_create(cls, data, *, cache=None, http=None):
         await cache.store_guild(data)
@@ -190,6 +182,14 @@ class Guild(Entity):
     async def from_guild_update(cls, data, *, cache=None, http=None):
         await cache.store_guild(data)
         return cls(data, cache=cache, http=http)
+
+    @Entity.requires_http
+    async def fetch_member(self, user_id):
+        pass
+
+    @Entity.requires_cache
+    async def get_member(self, user_id):
+        pass
 
 
 class Channel(Entity):
@@ -277,3 +277,10 @@ class Message(Entity):
     @classmethod
     async def from_message_update(cls, data, *, cache=None, http=None):
         return cls(data, cache=cache, http=http)
+
+    @Entity.requires_http
+    async def send(self, *args, **kwargs):
+        return await self._http.create_message(self.channel_id, *args, **kwargs)
+
+    def reply(self, *args, **kwargs):
+        return self.send(*args, **kwargs)
