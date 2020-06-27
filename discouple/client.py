@@ -12,31 +12,46 @@ class HTTPMixin(ABC):
     http: HTTPClient
     cache: EntityCache
 
-    def fetch_bot_user(self):
-        return self.http.get_bot_user()
+    def _maybe_parse(self, data, klass):
+        if data is not None:
+            return klass(data, http=self.http, cache=self.cache)
 
-    def fetch_user(self, user_id):
-        return self.http.get_user(user_id)
+        return data
+
+    async def fetch_bot_user(self):
+        result = await self.http.get_bot_user()
+        return self._maybe_parse(result, User)
+
+    async def fetch_user(self, user_id):
+        result = await self.http.get_user(user_id)
+        return self._maybe_parse(result, User)
 
 
 class CacheMixin(ABC):
+    http: HTTPClient
     cache: EntityCache
 
-    async def _get_and_parse(self, coro, klass):
-        data = await coro
-        return klass(data=data, cache=self.cache)
+    def _maybe_parse(self, data, klass):
+        if data is not None:
+            return klass(data, http=self.http, cache=self.cache)
 
-    def get_guild(self, guild_id):
-        return self._get_and_parse(self.cache.get_guild(guild_id), klass=Guild)
+        return data
 
-    def get_channel(self, channel_id):
-        return self._get_and_parse(self.cache.get_channel(channel_id), klass=Channel)
+    async def get_guild(self, guild_id):
+        result = await self.cache.get_guild(guild_id)
+        return self._maybe_parse(result, Guild)
 
-    def get_role(self, role_id):
-        return self._get_and_parse(self.cache.get_role(role_id), klass=Role)
+    async def get_channel(self, channel_id):
+        result = await self.cache.get_channel(channel_id)
+        return self._maybe_parse(result, Channel)
 
-    def get_user(self, user_id):
-        return self._get_and_parse(self.cache.get_user(user_id), klass=User)
+    async def get_role(self, role_id):
+        result = await self.cache.get_role(role_id)
+        return self._maybe_parse(result, Role)
+
+    async def get_user(self, user_id):
+        result = await self.cache.get_user(user_id)
+        return self._maybe_parse(result, User)
 
 
 class Client(HTTPMixin, CacheMixin):

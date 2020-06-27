@@ -65,6 +65,12 @@ class Entity(Hashable):
     def has_http(self):
         return self._http is not None
 
+    def _maybe_parse(self, data, klass):
+        if data is not None:
+            return klass(data, http=self._http, cache=self._cache)
+
+        return data
+
     @staticmethod
     def requires_cache(func):
         def _wrapper(entity, *args, **kwargs):
@@ -280,24 +286,29 @@ class Message(Entity):
         return cls(data, cache=cache, http=http)
 
     @Entity.requires_http
-    def send(self, *args, **kwargs):
-        return self._http.create_message(self.channel_id, *args, **kwargs)
+    async def send(self, *args, **kwargs):
+        result = await self._http.create_message(self.channel_id, *args, **kwargs)
+        return self._maybe_parse(result, Message)
 
     @Entity.requires_cache
-    def get_channel(self):
-        return self._cache.get_channel(self.channel_id)
+    async def get_channel(self):
+        result = await self._cache.get_channel(self.channel_id)
+        return self._maybe_parse(result, Channel)
 
     @Entity.requires_http
-    def fetch_channel(self):
-        return self._http.get_channel(self.channel_id)
+    async def fetch_channel(self):
+        result = await self._http.get_channel(self.channel_id)
+        return self._maybe_parse(result, Channel)
 
     @Entity.requires_cache
-    def get_guild(self):
-        return self._cache.get_guild(self.guild_id)
+    async def get_guild(self):
+        result = await self._cache.get_guild(self.guild_id)
+        return self._maybe_parse(result, Guild)
 
     @Entity.requires_http
-    def fetch_guild(self):
-        return self._http.get_guild(self.guild_id)
+    async def fetch_guild(self):
+        result = await self._http.get_guild(self.guild_id)
+        return self._maybe_parse(result, Guild)
 
     def reply(self, *args, **kwargs):
         return self.send(*args, **kwargs)

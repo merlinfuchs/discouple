@@ -12,8 +12,6 @@ import aiohttp
 import aioredis
 import orjson
 
-from .entities import *
-
 __all__ = (
     "Route",
     "QueuedRequest",
@@ -240,7 +238,6 @@ class HTTPClient:
             "X-Ratelimit-Precision": "millisecond",
             "Authorization": "Bot " + self.token,
         }
-        klass = options.pop("klass", None)
 
         if "json" in options:
             headers["Content-Type"] = "application/json"
@@ -267,11 +264,7 @@ class HTTPClient:
                 await self._ratelimits.set_delta(route, delta)
 
             if 300 > resp.status >= 200:
-                if klass is not None:
-                    result = klass(data)
-                else:
-                    result = data
-                return req.future.set_result(result)
+                return req.future.set_result(data)
 
             if resp.status == 429 and resp.headers.get("Via"):
                 retry_after = data["retry_after"] / 1000.0
@@ -314,29 +307,16 @@ class HTTPClient:
         return self.request(
             Route("POST", "/channels/{channel_id}/messages", channel_id=channel_id),
             json={"content": content},
-            klass=Message,
         )
 
     def get_bot_user(self):
-        return self.request(
-            Route("GET", "/users/@me"),
-            klass=User
-        )
+        return self.request(Route("GET", "/users/@me"))
 
     def get_user(self, user_id):
-        return self.request(
-            Route("GET", "/users/{user_id}", user_id=user_id),
-            klass=User
-        )
+        return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
 
     def get_channel(self, channel_id):
-        return self.request(
-            Route("GET", "/channels/{channel_id}", channel_id=channel_id),
-            klass=Channel
-        )
+        return self.request(Route("GET", "/channels/{channel_id}", channel_id=channel_id))
 
     def get_guild(self, guild_id):
-        return self.request(
-            Route("GET", "/guilds/{guild_id}", guild_id=guild_id),
-            klass=Guild
-        )
+        return self.request(Route("GET", "/guilds/{guild_id}", guild_id=guild_id))
