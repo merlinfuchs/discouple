@@ -1,3 +1,5 @@
+import asyncio
+
 from abc import ABC
 from collections import defaultdict
 
@@ -199,12 +201,29 @@ class RedisEntityCache(EntityCache):
     def __init__(self, redis, prefix="dc"):
         self.redis = redis
         self.prefix = prefix
+        asyncio.create_task(self.init_json())
+
+    async def init_json(self):
+        for type_ in ("guild", "channel", "role", "user"):
+            if not await self.redis.execute("EXISTS", f"{self.prefix}:{type_}s"):
+                await self.redis.execute(
+                    "JSON.SET", f"{self.prefix}:{type_}s", ".", b"{}"
+                )
 
     # Most entities are based on a simple ID for identifying
 
     async def store_entity(self, type_, data):
         id_ = f"{data['id']}"
-        await self.redis.execute("JSON.SET", f"{self.prefix}:{type_}s", id_, data)
+        await self.redis.execute(
+            "JSON.SET", f"{self.prefix}:{type_}s", id_, orjson.dumps(data)
+        )
+        if type_ == "guild":
+            if not await self.redis.execute(
+                "EXISTS", f"{self.prefix}:guild:{id_}:members"
+            ):
+                await self.redis.execute(
+                    "JSON.SET", f"{self.prefix}:guild:{id_}:members", ".", b"{}"
+                )
         if type_ in ("channel", "role") and data.get("type") not in (
             ChannelType.DM,
             ChannelType.GROUP_DM,
@@ -315,7 +334,10 @@ class RedisEntityCache(EntityCache):
     async def store_member(self, data):
         id_ = f"{data['user']['id']}"
         await self.redis.execute(
-            "JSON.SET", f"{self.prefix}:guild:{data['guild_id']}:members", id_, data
+            "JSON.SET",
+            f"{self.prefix}:guild:{data['guild_id']}:members",
+            id_,
+            orjson.dumps(data),
         )
 
     async def get_member(self, guild_id, user_id):

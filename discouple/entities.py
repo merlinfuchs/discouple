@@ -276,8 +276,7 @@ class Channel(Entity):
         self.position = data.get("position")
         self.permission_overwrites = {
             int(ov["id"]): PermissionOverwrites.from_pair(
-                Permissions(ov["allow"]),
-                Permissions(ov["deny"])
+                Permissions(ov["allow"]), Permissions(ov["deny"])
             )
             for ov in data["permission_overwrites"]
         }
@@ -401,10 +400,7 @@ class Member(User):
 
 
 class PartialMessage(Entity):
-    __slots__ = (
-        "_data",
-        "channel_id"
-    )
+    __slots__ = ("_data", "channel_id")
 
     def _update(self, data):
         self._data = data
