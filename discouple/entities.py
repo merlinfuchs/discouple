@@ -400,10 +400,7 @@ class Member(User):
 
 
 class PartialMessage(Entity):
-    __slots__ = (
-        "_data",
-        "channel_id"
-    )
+    __slots__ = ("_data", "channel_id")
 
     def _update(self, data):
         self._data = data
