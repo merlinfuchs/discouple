@@ -101,7 +101,7 @@ class Client(HTTPMixin, CacheMixin):
     async def _event_received(self, event, data):
         parsers = {
             "MESSAGE_CREATE": Message.from_message_create,
-            "MESSAGE_UPDATE": Message.from_message_update,
+            "MESSAGE_UPDATE": PartialMessage.from_message_update,
             "GUILD_CREATE": Guild.from_guild_create,
             "GUILD_UPDATE": Guild.from_guild_update,
         }
