@@ -266,7 +266,7 @@ class Channel(Entity):
         "owner_id",
         "application_id",
         "parent_id",
-        "last_pin_timestamp"
+        "last_pin_timestamp",
     )
 
     def _update(self, data):
@@ -303,7 +303,7 @@ class Role(Entity):
         "position",
         "permissions",
         "managed",
-        "mentionable"
+        "mentionable",
     )
 
     def _update(self, data):
@@ -338,13 +338,23 @@ class User(Entity):
         self.avatar = data["avatar"]
         self.bot = data.get("bot", False)
         self.system = data.get("system", False)
-        self.mfa_enabled = MFALevel(data["mfa_level"]) if data.get("mfa_level") is not None else None
+        self.mfa_enabled = (
+            MFALevel(data["mfa_level"]) if data.get("mfa_level") is not None else None
+        )
         self.locale = data.get("locale")
         self.verified = data.get("verified")
         self.email = data.get("email")
         self.flags = UserFlags(data["flags"]) if data.get("flags") is not None else None
-        self.premium_type = UserPremiumType(data["premium_type"]) if data.get("premium_type") is not None else None
-        self.public_flags = UserFlags(data["public_flags"]) if data.get("public_flags") is not None else None
+        self.premium_type = (
+            UserPremiumType(data["premium_type"])
+            if data.get("premium_type") is not None
+            else None
+        )
+        self.public_flags = (
+            UserFlags(data["public_flags"])
+            if data.get("public_flags") is not None
+            else None
+        )
 
     @property
     def avatar_url(self):
