@@ -1,10 +1,10 @@
-from abc import ABC
 from datetime import datetime
 
 from .enums import *
 from .flags import *
 
 DISCORD_EPOCH = 1420070400000
+DISCORD_CDN = "https://cdn.discordapp.com/"
 
 __all__ = (
     "Hashable",
@@ -193,6 +193,52 @@ class Guild(Entity):
         await cache.store_guild(data)
         return cls(data, cache=cache, http=http)
 
+    @property
+    def icon_url(self):
+        return self.icon_url_as()
+
+    def icon_url_as(self, *, format=None, static_format="webp"):
+        if self.icon is None:
+            return None
+
+        if format is not None:
+            return f"{DISCORD_CDN}icons/{self.id}/{self.icon}.{format}"
+
+        if self.icon.startswith("a_"):
+            return f"{DISCORD_CDN}icons/{self.id}/{self.icon}.gif"
+
+        return f"{DISCORD_CDN}icons/{self.id}/{self.icon}.{static_format}"
+
+    @property
+    def splash_url(self):
+        return self.splash_url_as()
+
+    def splash_url_as(self, *, format="webp"):
+        if self.splash is None:
+            return None
+
+        return f"{DISCORD_CDN}splashes/{self.id}/{self.splash}.{format}"
+
+    @property
+    def discovery_splash_url(self):
+        return self.discovery_splash_url_as()
+
+    def discovery_splash_url_as(self, format="webp"):
+        if self.discovery_splash is None:
+            return None
+
+        return f"{DISCORD_CDN}discovery-splashes/{self.id}/{self.discovery_splash}.{format}"
+
+    @property
+    def banner_url(self):
+        return self.banner_url_as()
+
+    def banner_url_as(self, format="webp"):
+        if self.banner is None:
+            return None
+
+        return f"{DISCORD_CDN}banners/{self.id}/{self.banner}.{format}"
+
     @Entity.requires_http
     async def fetch_member(self, user_id):
         pass
@@ -282,7 +328,7 @@ class User(Entity):
 
     def _update(self, data):
         self.name = data["username"]
-        self.discriminator = data["discriminator"]
+        self.discriminator = int(data["discriminator"])
         self.avatar = data["avatar"]
         self.bot = data.get("bot", False)
         self.system = data.get("system", False)
@@ -293,6 +339,22 @@ class User(Entity):
         self.flags = UserFlags(data["flags"]) if data.get("flags") is not None else None
         self.premium_type = UserPremiumType(data["premium_type"]) if data.get("premium_type") is not None else None
         self.public_flags = UserFlags(data["public_flags"]) if data.get("public_flags") is not None else None
+
+    @property
+    def avatar_url(self):
+        return self.avatar_url_as()
+
+    def avatar_url_as(self, format=None, static_format="webp"):
+        if self.avatar is None:
+            return f"{DISCORD_CDN}embed/avatars/{self.discriminator % 5}.png"
+
+        if format is not None:
+            return f"{DISCORD_CDN}avatars/{self.id}/{self.avatar}.{format}"
+
+        if self.avatar.startswith("a_"):
+            return f"{DISCORD_CDN}avatars/{self.id}/{self.avatar}.gif"
+
+        return f"{DISCORD_CDN}avatars/{self.id}/{self.avatar}.{static_format}"
 
 
 class Member(User):
