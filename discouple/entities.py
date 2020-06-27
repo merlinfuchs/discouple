@@ -203,24 +203,122 @@ class Guild(Entity):
 
 
 class Channel(Entity):
+    __slots__ = (
+        "type",
+        "guild_id",
+        "position",
+        "permission_overwrites",
+        "name",
+        "topic",
+        "nsfw",
+        "last_message_id",
+        "bitrate",
+        "user_limit",
+        "rate_limit_per_user",
+        "recipients",
+        "icon",
+        "owner_id",
+        "application_id",
+        "parent_id",
+        "last_pin_timestamp"
+    )
+
     def _update(self, data):
+        self.type = ChannelType(data["type"])
+        self.guild_id = maybe_int(data.get("guild_id"))
+        self.position = data.get("position")
+        self.permission_overwrites = None
         self.name = data["name"]
+        self.topic = data.get("topic")
+        self.nsfw = data.get("nsfw")
+        self.last_message_id = maybe_int(data.get("last_message_id"))
+        self.bitrate = data.get("bitrate")
+        self.user_limit = data.get("user_limit")
+        self.rate_limit_per_user = data.get("rate_limit_per_user")
+        self.recipients = [User(u) for u in data.get("recipients", [])]
+        self.icon = data.get("icon")
+        self.owner_id = maybe_int(data.get("owner_id"))
+        self.application_id = maybe_int(data.get("application_id"))
+        self.parent_id = maybe_int(data.get("parent_id"))
+        self.last_pin_timestamp = None
 
 
 class Role(Entity):
-    pass
+    __slots__ = (
+        "name",
+        "color",
+        "hoist",
+        "position",
+        "permissions",
+        "managed",
+        "mentionable"
+    )
+
+    def _update(self, data):
+        self.name = data["name"]
+        self.color = data["color"]
+        self.hoist = data["hoist"]
+        self.position = data["position"]
+        self.permissions = None
+        self.managed = data["managed"]
+        self.mentionable = data["mentionable"]
 
 
 class User(Entity):
-    pass
+    __slots__ = (
+        "name",
+        "discriminator",
+        "avatar",
+        "bot",
+        "system",
+        "mfa_enabled",
+        "locale",
+        "verified",
+        "email",
+        "flags",
+        "premium_type",
+        "public_flags",
+    )
+
+    def _update(self, data):
+        self.name = data["username"]
+        self.discriminator = data["discriminator"]
+        self.avatar = data["avatar"]
+        self.bot = data.get("bot", False)
+        self.system = data.get("system", False)
+        self.mfa_enabled = MFALevel(data["mfa_level"]) if data.get("mfa_level") is not None else None
+        self.locale = data.get("locale")
+        self.verified = data.get("verified")
+        self.email = data.get("email")
+        self.flags = UserFlags(data["flags"]) if data.get("flags") is not None else None
+        self.premium_type = UserPremiumType(data["premium_type"]) if data.get("premium_type") is not None else None
+        self.public_flags = UserFlags(data["public_flags"]) if data.get("public_flags") is not None else None
 
 
-class Member(Entity):
+class Member(User):
+    __slots__ = (
+        "nick",
+        "role_ids",
+        "joined_at",
+        "premium_since",
+        "deaf",
+        "mute",
+    )
+
     def __init__(self, data, *, cache=None, http=None):
         self.id = int(data["user"]["id"])
         self._cache = cache
         self._http = http
         self._update(data)
+
+    def _update(self, data):
+        super()._update(data["user"])
+        self.nick = data["nick"]
+        self.role_ids = [int(r) for r in data["roles"]]
+        self.joined_at = None
+        self.premium_since = None
+        self.deaf = data["deaf"]
+        self.mute = data["mute"]
 
 
 class Message(Entity):

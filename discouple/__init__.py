@@ -1,5 +1,3 @@
-import cmd
-
 from .broker import *
 from .cache import *
 from .client import *

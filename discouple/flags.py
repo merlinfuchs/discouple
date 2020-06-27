@@ -75,3 +75,23 @@ class SystemChannelFlags(Flags):
 
     DEFAULT_VALUE = 0
     FLAGS = FlagList.collect_flags()
+
+
+class UserFlags(Flags):
+    class FlagList(Flags.FlagList):
+        discord_employee = 1 << 0
+        discord_partner = 1 << 1
+        hypesquad_events = 1 << 2
+        bug_hunter_level_1 = 1 << 3
+        house_bravery = 1 << 6
+        house_brilliance = 1 << 7
+        house_balance = 1 << 8
+        early_supporter = 1 << 9
+        team_user = 1 << 10
+        system = 1 << 12
+        bug_hunter_level_2 = 1 << 14
+        verified_bot = 1 << 16
+        verified_bot_developer = 1 << 17
+
+    DEFAULT_VALUE = 0
+    FLAGS = FlagList.collect_flags()

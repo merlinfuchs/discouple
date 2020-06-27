@@ -30,3 +30,19 @@ class GuildPremiumTier(IntEnum):
     TIER_1 = 1
     TIER_2 = 2
     TIER_3 = 3
+
+
+class UserPremiumType(IntEnum):
+    NONE = 0
+    NITRO_CLASSIC = 1
+    NITRO = 2
+
+
+class ChannelType(IntEnum):
+    GUILD_TEXT = 0
+    DM = 1
+    GUILD_VOICE = 2
+    GROUP_DM = 3
+    GUILD_CATEGORY = 4
+    GUILD_NEWS = 5
+    GUILD_STORE = 6
