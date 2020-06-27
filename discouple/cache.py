@@ -1,4 +1,5 @@
 from abc import ABC
+from collections import defaultdict
 
 import orjson
 
@@ -89,6 +90,8 @@ class LocalEntityCache(EntityCache):
         self.guilds = {}
         self.channels = {}
         self.users = {}
+        self.roles = {}
+        self.members = defaultdict(dict)
 
     async def store_guild(self, data):
         self.guilds[data["id"]] = data
@@ -105,6 +108,82 @@ class LocalEntityCache(EntityCache):
     async def iter_guilds(self):
         for guild in self.guilds.values():
             yield guild
+
+    async def store_channel(self, data):
+        self.channels[data["id"]] = data
+
+    async def get_channel(self, channel_id):
+        return self.channels.get(channel_id)
+
+    async def remove_channel(self, channel_id):
+        try:
+            del self.channels[channel_id]
+        except KeyError:
+            pass
+
+    async def iter_channels(self):
+        for channel in self.channels.values():
+            yield channel
+
+    async def iter_guild_channels(self, guild_id):
+        guild_id = f"{guild_id}"
+        for channel in self.channels.values():
+            if channel["guild_id"] == guild_id:
+                yield channel
+
+    async def store_role(self, data):
+        self.roles[data["id"]] = data
+
+    async def get_role(self, role_id):
+        return self.roles.get(role_id)
+
+    async def remove_role(self, role_id):
+        try:
+            del self.roles[role_id]
+        except KeyError:
+            pass
+
+    async def iter_roles(self):
+        for role in self.roles.values():
+            yield role
+
+    async def iter_guild_roles(self, guild_id):
+        guild_id = f"{guild_id}"
+        for role in self.roles.values():
+            if role["guild_id"] == guild_id:
+                yield role
+
+    async def store_user(self, data):
+        self.users[data["id"]] = data
+
+    async def get_user(self, user_id):
+        return self.users.get(user_id)
+
+    async def remove_user(self, user_id):
+        try:
+            del self.users[user_id]
+        except KeyError:
+            pass
+
+    async def iter_users(self):
+        for user in self.users.values():
+            yield user
+
+    async def store_member(self, data):
+        self.members[int(data["guild_id"])][int(data["user"]["id"])] = data
+
+    async def get_member(self, guild_id, member_id):
+        return self.members[guild_id].get(member_id)
+
+    async def remove_member(self, guild_id, member_id):
+        try:
+            del self.members[guild_id][member_id]
+        except KeyError:
+            pass
+
+    async def iter_guild_members(self, guild_id):
+        for member in self.members[guild_id].values():
+            yield member
 
 
 class RedisEntityCache(EntityCache):
