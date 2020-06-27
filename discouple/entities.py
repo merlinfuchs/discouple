@@ -15,6 +15,7 @@ __all__ = (
     "Role",
     "User",
     "Member",
+    "PartialMessage",
     "Message",
 )
 
@@ -398,6 +399,24 @@ class Member(User):
         self.mute = data["mute"]
 
 
+class PartialMessage(Entity):
+    __slots__ = (
+        "_data",
+        "channel_id"
+    )
+
+    def _update(self, data):
+        self._data = data
+        self.channel_id = int(data["channel_id"])
+
+    def __getitem__(self, item):
+        return self._data.get(item)
+
+    @classmethod
+    async def from_message_update(cls, data, *, cache=None, http=None):
+        return cls(data, cache=cache, http=http)
+
+
 class Message(Entity):
     __slots__ = (
         "channel_id",
@@ -458,10 +477,6 @@ class Message(Entity):
 
     @classmethod
     async def from_message_create(cls, data, *, cache=None, http=None):
-        return cls(data, cache=cache, http=http)
-
-    @classmethod
-    async def from_message_update(cls, data, *, cache=None, http=None):
         return cls(data, cache=cache, http=http)
 
     @Entity.requires_http
