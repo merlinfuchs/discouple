@@ -1,7 +1,7 @@
 from ..client import Client
-from .command import CommandTable, Command
-from .errors import *
+from .command import Command, CommandTable
 from .context import Context
+from .errors import *
 
 
 class Bot(Client, CommandTable):
@@ -31,7 +31,7 @@ class Bot(Client, CommandTable):
         if not msg.content.startswith(self.prefix):
             return
 
-        parts = msg.content[len(self.prefix):].split(" ")
+        parts = msg.content[len(self.prefix) :].split(" ")
         remaining, cmd = self.find_command(parts)
         if not isinstance(cmd, Command):
             return

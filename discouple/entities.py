@@ -134,7 +134,7 @@ class Guild(Entity):
         "public_updates_channel_id",
         "max_video_channel_users",
         "approximate_member_count",
-        "approximate_presence_count"
+        "approximate_presence_count",
     )
 
     def _update(self, data):
@@ -147,8 +147,12 @@ class Guild(Entity):
         self.afk_channel_id = maybe_int(data["afk_channel_id"])
         self.afk_timeout = data["afk_timeout"]
         self.verification_level = GuildVerificationLevel(data["verification_level"])
-        self.default_message_notifications = GuildMessageNotificationLevel(data["default_message_notifications"])
-        self.explicit_content_filter = GuildContentFilterLevel(data["explicit_content_filter"])
+        self.default_message_notifications = GuildMessageNotificationLevel(
+            data["default_message_notifications"]
+        )
+        self.explicit_content_filter = GuildContentFilterLevel(
+            data["explicit_content_filter"]
+        )
         self.roles = [Role(r) for r in data["roles"]]
         self.emojis = None
         self.features = data["features"]

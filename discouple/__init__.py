@@ -1,10 +1,11 @@
+import cmd
+
 from .broker import *
 from .cache import *
 from .client import *
 from .entities import *
 from .http import *
 from .util import *
-import cmd
 
 __title__ = "discouple"
 __version__ = "0.0.1-pre"

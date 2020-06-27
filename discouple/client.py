@@ -93,7 +93,7 @@ class Client(HTTPMixin, CacheMixin):
             "MESSAGE_CREATE": Message.from_message_create,
             "MESSAGE_UPDATE": Message.from_message_update,
             "GUILD_CREATE": Guild.from_guild_create,
-            "GUILD_UPDATE": Guild.from_guild_update
+            "GUILD_UPDATE": Guild.from_guild_update,
         }
         parser = parsers.get(event.upper())
         if parser:
