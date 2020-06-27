@@ -1,8 +1,10 @@
 from abc import ABC
 from datetime import datetime
 
-DISCORD_EPOCH = 1420070400000
+from .enums import *
+from .flags import *
 
+DISCORD_EPOCH = 1420070400000
 
 __all__ = (
     "Hashable",
@@ -15,6 +17,10 @@ __all__ = (
     "Member",
     "Message",
 )
+
+
+def maybe_int(v):
+    return int(v) if v is not None else v
 
 
 class Hashable(ABC):
@@ -59,11 +65,17 @@ class Entity(Hashable):
     def has_http(self):
         return self._http is not None
 
+    def _maybe_parse(self, data, klass):
+        if data is not None:
+            return klass(data, http=self._http, cache=self._cache)
+
+        return data
+
     @staticmethod
     def requires_cache(func):
         def _wrapper(entity, *args, **kwargs):
             assert entity.has_cache(), "This method requires the cache to be present"
-            return func(*args, **kwargs)
+            return func(entity, *args, **kwargs)
 
         return _wrapper
 
@@ -73,7 +85,7 @@ class Entity(Hashable):
             assert (
                 entity.has_http()
             ), "This method requires the http client to be present"
-            return func(*args, **kwargs)
+            return func(entity, *args, **kwargs)
 
         return _wrapper
 
@@ -82,10 +94,104 @@ class Entity(Hashable):
 
 
 class Guild(Entity):
-    __slots__ = ("name",)
+    __slots__ = (
+        "name",
+        "icon",
+        "splash",
+        "discovery_splash",
+        "owner_id",
+        "region",
+        "afk_channel_id",
+        "afk_timeout",
+        "verification_level",
+        "default_message_notifications",
+        "explicit_content_filter",
+        "roles",
+        "emojis",
+        "features",
+        "mfa_level",
+        "application_id",
+        "widget_enabled",
+        "widget_channel_id",
+        "system_channel_id",
+        "system_channel_flags",
+        "rules_channel_id",
+        "large",
+        "unavailable",
+        "member_count",
+        "voice_states",
+        "members",
+        "channels",
+        "presences",
+        "max_presences",
+        "max_members",
+        "vanity_url_code",
+        "description",
+        "banner",
+        "premium_tier",
+        "premium_subscription_count",
+        "preferred_locale",
+        "public_updates_channel_id",
+        "max_video_channel_users",
+        "approximate_member_count",
+        "approximate_presence_count",
+    )
 
     def _update(self, data):
-        self.name = data.get("name")
+        self.name = data["name"]
+        self.icon = data.get("icon")
+        self.splash = data.get("splash")
+        self.discovery_splash = data.get("discovery_splash")
+        self.owner_id = int(data["owner_id"])
+        self.region = data["region"]
+        self.afk_channel_id = maybe_int(data["afk_channel_id"])
+        self.afk_timeout = data["afk_timeout"]
+        self.verification_level = GuildVerificationLevel(data["verification_level"])
+        self.default_message_notifications = GuildMessageNotificationLevel(
+            data["default_message_notifications"]
+        )
+        self.explicit_content_filter = GuildContentFilterLevel(
+            data["explicit_content_filter"]
+        )
+        self.roles = [Role(r) for r in data["roles"]]
+        self.emojis = None
+        self.features = data["features"]
+        self.mfa_level = MFALevel(data["mfa_level"])
+        self.application_id = maybe_int(data["application_id"])
+        self.widget_enabled = data.get("widget_enabled", False)
+        self.widget_channel_id = maybe_int(data.get("widget_channel_id"))
+        self.system_channel_id = maybe_int(data["system_channel_id"])
+        self.system_channel_flags = SystemChannelFlags(data["system_channel_flags"])
+        self.rules_channel_id = maybe_int(data["rules_channel_id"])
+        self.large = data.get("large", False)
+        self.unavailable = data.get("unavailable", False)
+        self.member_count = data.get("member_count")
+        self.voice_states = None
+        self.members = [Member(m) for m in data.get("members", [])]
+        self.channels = [Channel(c) for c in data.get("channels", [])]
+        self.presences = None
+        self.max_presences = data.get("max_presences", 25000)
+        self.max_members = data.get("max_members")
+        self.vanity_url_code = data.get("vanity_url_code")
+        self.description = data.get("description")
+        self.banner = data.get("banner")
+        self.premium_tier = GuildPremiumTier(data["premium_tier"])
+        self.premium_subscription_count = data.get("premium_subscription_count", 0)
+        self.preferred_locale = data["preferred_locale"]
+        self.public_updates_channel_id = maybe_int(data["public_updates_channel_id"])
+        self.max_video_channel_users = data.get("max_video_channel_users")
+        self.approximate_member_count = data.get("approximate_member_count")
+        self.approximate_presence_count = data.get("approximate_presence_count")
+
+    @classmethod
+    async def from_guild_create(cls, data, *, cache=None, http=None):
+        await cache.store_guild(data)
+        return cls(data, cache=cache, http=http)
+
+    @classmethod
+    async def from_guild_update(cls, data, *, cache=None, http=None):
+        await cache.store_guild(data)
+        return cls(data, cache=cache, http=http)
 
     @Entity.requires_http
     async def fetch_member(self, user_id):
@@ -97,7 +203,8 @@ class Guild(Entity):
 
 
 class Channel(Entity):
-    pass
+    def _update(self, data):
+        self.name = data["name"]
 
 
 class Role(Entity):
@@ -181,3 +288,31 @@ class Message(Entity):
     @classmethod
     async def from_message_update(cls, data, *, cache=None, http=None):
         return cls(data, cache=cache, http=http)
+
+    @Entity.requires_http
+    async def send(self, *args, **kwargs):
+        result = await self._http.create_message(self.channel_id, *args, **kwargs)
+        return self._maybe_parse(result, Message)
+
+    @Entity.requires_cache
+    async def get_channel(self):
+        result = await self._cache.get_channel(self.channel_id)
+        return self._maybe_parse(result, Channel)
+
+    @Entity.requires_http
+    async def fetch_channel(self):
+        result = await self._http.get_channel(self.channel_id)
+        return self._maybe_parse(result, Channel)
+
+    @Entity.requires_cache
+    async def get_guild(self):
+        result = await self._cache.get_guild(self.guild_id)
+        return self._maybe_parse(result, Guild)
+
+    @Entity.requires_http
+    async def fetch_guild(self):
+        result = await self._http.get_guild(self.guild_id)
+        return self._maybe_parse(result, Guild)
+
+    def reply(self, *args, **kwargs):
+        return self.send(*args, **kwargs)

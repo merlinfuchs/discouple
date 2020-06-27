@@ -3,6 +3,7 @@ import inspect
 from abc import ABC
 
 from .check import Check, Cooldown
+from .converter import Converter
 from .errors import *
 from .resume import Resumable, Resume
 
@@ -12,7 +13,7 @@ class CommandTable(ABC):
         self.parent = None  # Gets filled later
         self._checks = set()
         self._cooldown = None
-        self.commands = set(commands)
+        self.commands = list(commands)
         self.parent_checks = parent_checks
 
     @property
@@ -41,7 +42,7 @@ class CommandTable(ABC):
     def command(self, *args, **kwargs):
         def _predicate(callback):
             cmd = Command(callback, *args, **kwargs)
-            self.commands.add(cmd)
+            self.commands.append(cmd)
             return cmd
 
         return _predicate
@@ -147,7 +148,8 @@ class Command(CommandTable, Resumable):
         *args,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
+        CommandTable.__init__(self, *args, **kwargs)
+        Resumable.__init__(self)
 
         self.module = None  # Gets filled later if this command belongs to a module
 
@@ -204,5 +206,38 @@ class Command(CommandTable, Resumable):
         for resume in self.resumes:
             resume.fill_module(module)
 
-    async def execute(self):
-        pass
+    async def execute(self, ctx, parts):
+        ctx.last_cmd = self
+        default = []
+        args = []
+        kwargs = {}
+
+        for parameter in self.parameters:
+            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+                args.extend(parameter.parse(parts))
+
+            elif parameter.kind == inspect.Parameter.VAR_KEYWORD:
+                kwargs.update(parameter.parse(parts))
+
+            elif parameter.kind == inspect.Parameter.KEYWORD_ONLY:
+                kwargs[parameter.name] = parameter.parse(parts)
+
+            else:
+                default.append(parameter.parse(parts))
+
+        for check in self.checks:
+            await check.run(ctx, *default, *args, **kwargs)
+
+        if self._cooldown is not None:
+            await self._cooldown.run(ctx, *default, *args, **kwargs)
+
+        if self.module is None:
+            res = self.callback(ctx, *default, *args, **kwargs)
+
+        else:
+            res = self.callback(self.module, ctx, *default, *args, **kwargs)
+
+        if inspect.isawaitable(res):
+            return await res
+
+        return res

@@ -7,7 +7,7 @@ class BaseResumeHandler(ABC):
 
 class Resumable(ABC):
     def __init__(self):
-        self.resumes = set()
+        self.resumes = []
 
     def resume(self, *args, **kwargs):
         """
@@ -18,7 +18,7 @@ class Resumable(ABC):
 
         def _predicate(callback):
             res = Resume(self, callback, *args, **kwargs)
-            self.resumes.add(res)
+            self.resumes.append(res)
             return res
 
         return _predicate
