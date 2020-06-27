@@ -375,7 +375,7 @@ class Member(User):
 
     def _update(self, data):
         super()._update(data["user"])
-        self.nick = data["nick"]
+        self.nick = data.get("nick")
         self.role_ids = [int(r) for r in data["roles"]]
         self.joined_at = None
         self.premium_since = None
