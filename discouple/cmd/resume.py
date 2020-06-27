@@ -36,7 +36,7 @@ class Resume(Resumable):
 
     @property
     def full_name(self):
-        return (self.parent.full_name + " " + self.event).strip()
+        return f"{self.parent.full_name} {self.event}".strip()
 
     def fill_module(self, module):
         self.module = module

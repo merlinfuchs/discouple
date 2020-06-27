@@ -29,7 +29,7 @@ class Route:
     Represents a discord api route with all major and minor parameters
     """
 
-    BASE = "https://discordapp.com/api/v7"
+    BASE = "https://discord.com/api/v7"
 
     def __init__(self, method: str, path: str, **parameters):
         self.method = method
@@ -39,17 +39,20 @@ class Route:
 
     @property
     def url(self) -> str:
-        return self.BASE + self.path.format(**self.parameters)
+        return f"{self.BASE}{self.path.format(**self.parameters)}"
 
     @property
     def default_bucket(self) -> str:
         """
         Used when the X-RateLimit-Bucket was not returned
         """
-        if "webhook_id" in self.parameters:
-            return "{0.path}_{webhook_id}".format(self, **self.parameters)
+        webhook_id = self.parameters.get("webhook_id")
+        if webhook_id is not None:
+            return f"{self.path}_{webhook_id}"
 
-        return "{0.path}_{guild_id}_{channel_id}".format(self, **self.parameters)
+        return (
+            "{self.path}_{self.parameters['guild_id']}_{self.parameters['channel_id']}"
+        )
 
 
 @dataclasses.dataclass
@@ -143,29 +146,29 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
         self._key_prefix = key_prefix
 
     async def get_bucket(self, route: Route) -> str:
-        bucket = await self._redis.hget(self._key_prefix + "buckets", route.path)
+        bucket = await self._redis.hget(f"{self._key_prefix}buckets", route.path)
         if bucket:
             bucket = bucket.decode("utf-8")
         return bucket or route.default_bucket
 
     async def get_delta(self, route: Route) -> float:
-        global_delta = await self._redis.ttl(self._key_prefix + "global")
+        global_delta = await self._redis.ttl(f"{self._key_prefix}global")
         if global_delta > 0:
             return global_delta
 
         bucket = await self.get_bucket(route)
-        delta = await self._redis.ttl(self._key_prefix + bucket)
+        delta = await self._redis.ttl(f"{self._key_prefix}{bucket}")
         return min(delta, 0)
 
     async def set_delta(self, route: Route, delta: float):
         bucket = await self.get_bucket(route)
-        await self._redis.setex(self._key_prefix + bucket, delta, 1)
+        await self._redis.setex(f"{self._key_prefix}{bucket}", delta, 1)
 
     async def set_global(self, delta: float):
-        return await self._redis.setex(self._key_prefix + "global", delta, 1)
+        return await self._redis.setex(f"{self._key_prefix}global", delta, 1)
 
     async def set_bucket(self, route: Route, bucket: str):
-        return await self._redis.hset(self._key_prefix + "buckets", route.path, bucket)
+        return await self._redis.hset(f"{self._key_prefix}buckets", route.path, bucket)
 
 
 async def json_or_text(response):
@@ -238,7 +241,7 @@ class HTTPClient:
         options["headers"] = headers = {
             "User-Agent": self.user_agent,
             "X-Ratelimit-Precision": "millisecond",
-            "Authorization": "Bot " + self.token,
+            "Authorization": f"Bot {self.token}",
         }
         klass = options.pop("klass", None)
 

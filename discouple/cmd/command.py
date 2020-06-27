@@ -87,8 +87,7 @@ class CommandParameter:
         if converter is bool:
 
             def _bool_converter(a):
-                a = str(a).lower()
-                return a == "y" or a == "yes" or a == "true"
+                return str(a).lower() in ("y", "yes", "true")
 
             self.converter = _bool_converter
 
@@ -146,7 +145,7 @@ class Command(CommandTable, Resumable):
         aliases=None,
         hidden=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -174,7 +173,7 @@ class Command(CommandTable, Resumable):
         self.parameters = [
             CommandParameter.from_parameter(p)
             for _, p in list(sig.parameters.items())
-            if p.name != "self" and p.name != "ctx"  # Skip self and ctx
+            if p.name not in ("self", "ctx")  # Skip self and ctx
         ]
 
     @property
@@ -185,7 +184,7 @@ class Command(CommandTable, Resumable):
 
         line = lines[0]
         if len(line) > 50:
-            line = line[:50] + "..."
+            line = f"{line[:50]}..."
 
         return line
 
@@ -195,7 +194,7 @@ class Command(CommandTable, Resumable):
             return self.name
 
         else:
-            return (self.parent.full_name + " " + self.name).strip()
+            return f"{self.parent.full_name} {self.name}".strip()
 
     def fill_module(self, module):
         self.module = module
