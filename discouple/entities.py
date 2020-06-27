@@ -273,7 +273,13 @@ class Channel(Entity):
         self.type = ChannelType(data["type"])
         self.guild_id = maybe_int(data.get("guild_id"))
         self.position = data.get("position")
-        self.permission_overwrites = None
+        self.permission_overwrites = {
+            int(ov["id"]): PermissionOverwrites.from_pair(
+                Permissions(ov["allow"]),
+                Permissions(ov["deny"])
+            )
+            for ov in data["permission_overwrites"]
+        }
         self.name = data["name"]
         self.topic = data.get("topic")
         self.nsfw = data.get("nsfw")
@@ -305,7 +311,7 @@ class Role(Entity):
         self.color = data["color"]
         self.hoist = data["hoist"]
         self.position = data["position"]
-        self.permissions = None
+        self.permissions = Permissions(data["permissions"])
         self.managed = data["managed"]
         self.mentionable = data["mentionable"]
 

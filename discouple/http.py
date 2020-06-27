@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from urllib.parse import quote as urlquote
 
 import aiohttp
-import aioredis
 import orjson
 
 __all__ = (
@@ -139,7 +138,7 @@ class RedisRateLimitHandler(BaseRateLimitHandler):
     Handles ratelimits in redis using key expiration
     """
 
-    def __init__(self, redis: aioredis.Redis, key_prefix="ratelimit:"):
+    def __init__(self, redis, key_prefix="ratelimit:"):
         self._redis = redis
         self._key_prefix = key_prefix
 
