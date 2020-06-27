@@ -28,9 +28,6 @@ class Flags(ABC):
 
             self._set_flag(flag, value)
 
-    def reset(self):
-        self.value = self.DEFAULT_VALUE
-
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.value == other.value
 
@@ -57,6 +54,10 @@ class Flags(ABC):
 
         return super().__setattr__(key, value)
 
+    def __iter__(self):
+        for name, flag in self.FLAGS.items():
+            yield name, self._has_flag(flag)
+
     def _set_flag(self, flag, value):
         if value:
             self.value |= flag
@@ -66,6 +67,17 @@ class Flags(ABC):
 
     def _has_flag(self, flag):
         return (self.value & flag) == flag
+
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            flag = self.FLAGS.get(key)
+            if flag is None:
+                raise TypeError(f"{key} is not a valid flag name.")
+
+            self._set_flag(flag, value)
+
+    def reset(self):
+        self.value = self.DEFAULT_VALUE
 
 
 class SystemChannelFlags(Flags):
@@ -95,3 +107,105 @@ class UserFlags(Flags):
 
     DEFAULT_VALUE = 0
     FLAGS = FlagList.collect_flags()
+
+
+class Permissions(Flags):
+    class FlagList(Flags.FlagList):
+        create_instant_invite = 1 << 0
+        kick_members = 1 << 1
+        ban_members = 1 << 2
+        administrator = 1 << 3
+        manage_channels = 1 << 4
+        manage_guild = 1 << 5
+        add_reactions = 1 << 6
+        view_audit_log = 1 << 7
+        priority_speaker = 1 << 8
+        stream = 1 << 9
+        read_messages = 1 << 10
+        send_messages = 1 << 11
+        send_tts_messages = 1 << 12
+        manage_messages = 1 << 13
+        embed_links = 1 << 14
+        attach_files = 1 << 15
+        read_message_history = 1 << 16
+        mention_everyone = 1 << 17
+        external_emojis = 1 << 18
+        view_guild_insights = 1 << 19
+        connect = 1 << 20
+        speak = 1 << 21
+        mute_members = 1 << 22
+        deafen_members = 1 << 23
+        move_members = 1 << 24
+        use_voice_activation = 1 << 25
+        change_nickname = 1 << 26
+        manage_nicknames = 1 << 27
+        manage_roles = 1 << 28
+        manage_webhooks = 1 << 29
+        manage_emojis = 1 << 30
+
+    DEFAULT_VALUE = 0
+    FLAGS = FlagList.collect_flags()
+
+    @classmethod
+    def none(cls):
+        return cls(0)
+
+    @classmethod
+    def all(cls):
+        return cls(cls.FlagList.max_value())
+
+    def __le__(self, other):
+        return (self.value & other.value) == self.value
+
+    def __ge__(self, other):
+        return (self.value | other.value) == self.value
+
+    def __lt__(self, other):
+        return self.is_subset(other) and self != other
+
+    def __gt__(self, other):
+        return self.is_superset(other) and self != other
+
+
+class PermissionOverwrites:
+    VALID_FLAGS = Permissions.FLAGS.keys()
+
+    def __init__(self, **kwargs):
+        self._values = {}
+        for key, value in kwargs.items():
+            if key in self.VALID_FLAGS:
+                self._values[key] = value
+
+    def __setattr__(self, key, value):
+        if key in self.VALID_FLAGS:
+            self._values[key] = value
+
+        return super().__setattr__(key, value)
+
+    def pair(self):
+        allow = Permissions.none()
+        deny = Permissions.none()
+
+        for key, value in self._values.items():
+            if value is True:
+                setattr(allow, key, True)
+
+            elif value is False:
+                setattr(deny, key, True)
+
+        return allow, deny
+
+    @classmethod
+    def from_pair(cls, allow, deny):
+        result = cls()
+        for key, value in allow:
+            if value is True:
+                setattr(result, key, True)
+
+        for key, value in deny:
+            if value is True:
+                setattr(result, key, False)
+
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
