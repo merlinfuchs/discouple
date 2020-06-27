@@ -205,7 +205,10 @@ class RedisEntityCache(EntityCache):
 
     async def init_json(self):
         for type_ in ("guild", "channel", "role", "user"):
-            await self.redis.execute("JSON.SET", f"{self.prefix}:{type_}s", ".", b"{}")
+            if not await self.redis.execute("EXISTS", f"{self.prefix}:{type_}s"):
+                await self.redis.execute(
+                    "JSON.SET", f"{self.prefix}:{type_}s", ".", b"{}"
+                )
 
     # Most entities are based on a simple ID for identifying
 
@@ -215,9 +218,12 @@ class RedisEntityCache(EntityCache):
             "JSON.SET", f"{self.prefix}:{type_}s", id_, orjson.dumps(data)
         )
         if type_ == "guild":
-            await self.redis.execute(
-                "JSON.SET", f"{self.prefix}:guild:{id_}:members", ".", b"{}"
-            )
+            if not await self.redis.execute(
+                "EXISTS", f"{self.prefix}:guild:{id_}:members"
+            ):
+                await self.redis.execute(
+                    "JSON.SET", f"{self.prefix}:guild:{id_}:members", ".", b"{}"
+                )
         if type_ in ("channel", "role") and data.get("type") not in (
             ChannelType.DM,
             ChannelType.GROUP_DM,
