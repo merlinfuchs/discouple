@@ -6,6 +6,7 @@ from .broker import Broker
 from .cache import EntityCache, NoEntityCache
 from .entities import *
 from .http import HTTPClient
+from .util import AsyncIterator
 
 
 class HTTPMixin(ABC):
@@ -41,13 +42,22 @@ class CacheMixin(ABC):
         result = await self.cache.get_guild(guild_id)
         return self._maybe_parse(result, Guild)
 
+    def iter_guilds(self):
+        return AsyncIterator(self.cache.iter_guilds())
+
     async def get_channel(self, channel_id):
         result = await self.cache.get_channel(channel_id)
         return self._maybe_parse(result, Channel)
 
+    def iter_channels(self):
+        return AsyncIterator(self.cache.iter_channels())
+
     async def get_role(self, role_id):
         result = await self.cache.get_role(role_id)
         return self._maybe_parse(result, Role)
+
+    def iter_roles(self):
+        return AsyncIterator(self.cache.iter_roles())
 
     async def get_user(self, user_id):
         result = await self.cache.get_user(user_id)
