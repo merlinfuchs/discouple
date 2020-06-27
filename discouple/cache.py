@@ -119,7 +119,7 @@ class RedisEntityCache(EntityCache):
 
     def __init__(self, redis, prefix="dc"):
         self.redis = redis
-        self.prefix = "dc"
+        self.prefix = prefix
 
     # Most entities are based on a simple ID for identifying
 
