@@ -226,7 +226,7 @@ class HTTPClient:
             Resets the request expiration
             """
             req.time_added = time.perf_counter()
-            return self.loop.call_later(_delta, self.queue.put, req)
+            return self.loop.call_later(_delta, self.queue.put_nowait, req)
 
         req.tries += 1
         route = req.route
