@@ -7,6 +7,12 @@ import aio_pika
 import orjson
 
 
+__all__ = (
+    "Broker",
+    "AMQPBroker"
+)
+
+
 class Broker(ABC):
     def __init__(self, callback=None):
         async def _default_callback(*_, **__):
